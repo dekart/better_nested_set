@@ -925,9 +925,9 @@ module SymetrieCom
           raise ActiveRecord::ActiveRecordError, "You cannot move a node if left or right is nil" unless self[left_col_name] && self[right_col_name]
           
           with_optional_transaction(transact) do
-            self.reload(:select => "#{left_col_name}, #{right_col_name}, #{parent_col_name}") # the lft/rgt values could be stale (target is reloaded below)
+            self.reload # the lft/rgt values could be stale (target is reloaded below)
             if target.is_a?(base_set_class)
-              target.reload(:select => "#{left_col_name}, #{right_col_name}, #{parent_col_name}") # could be stale
+              target.reload # could be stale
             else
               target = self.class.find_in_nested_set(target) # load object if we were given an ID
             end
@@ -1003,8 +1003,8 @@ module SymetrieCom
                   ELSE #{parent_col_name} END",
                 scope_condition)
             end
-            self.reload(:select => "#{left_col_name}, #{right_col_name}, #{parent_col_name}")
-            target.reload(:select => "#{left_col_name}, #{right_col_name}, #{parent_col_name}")
+            self.reload
+            target.reload
           end
         end
         
@@ -1093,13 +1093,15 @@ module SymetrieCom
         private
           # override the sql preparation method to exclude the lft/rgt columns
           # under the same conditions that the primary key column is excluded
-          def attributes_with_quotes(include_primary_key = true, include_readonly_attributes = true) #:nodoc:
+          def attributes_with_quotes(include_primary_key = true, include_readonly_attributes = true, attribute_names = @attributes.keys)
             left_and_right_column = [acts_as_nested_set_options[:left_column], acts_as_nested_set_options[:right_column]]
-            quoted = attributes.inject({}) do |quoted, (name, value)|
+
+            quoted = {}
+            connection = self.class.connection
+            attribute_names.each do |name|
               if column = column_for_attribute(name)
-                quoted[name] = quote_value(value, column) unless !include_primary_key && (column.primary || left_and_right_column.include?(column.name))
+                quoted[name] = connection.quote(read_attribute(name), column) unless !include_primary_key && (column.primary || left_and_right_column.include?(column.name))
               end
-              quoted
             end
             include_readonly_attributes ? quoted : remove_readonly_attributes(quoted)
           end
