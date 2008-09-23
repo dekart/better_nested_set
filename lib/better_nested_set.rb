@@ -59,10 +59,6 @@ module SymetrieCom
           # skip recursive destroy calls
           attr_accessor  :skip_before_destroy
           
-          # no bulk assignment
-          attr_protected  acts_as_nested_set_options[:left_column].intern,
-                          acts_as_nested_set_options[:right_column].intern,
-                          acts_as_nested_set_options[:parent_column].intern
           # no assignment to structure fields
           class_eval <<-EOV
             before_create :set_left_right
